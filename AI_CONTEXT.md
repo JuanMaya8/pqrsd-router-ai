@@ -59,6 +59,10 @@ uvicorn app.main:app --reload --port 8000   # http://localhost:8000/docs
 * `docker compose up --build` con los 3 repos (ver `pqrsd-router-frontend/docker-compose.yml`). Se añadió `.dockerignore` (sin él el contexto incluía `.venv`).
 * Se probó añadir una frase de «fuga de gas» al corpus: arregla ese caso pero baja la urgencia de 80 % a 76,7 % en `realistic_set` → **revertido**. El caso queda en Atención al Ciudadano + `needs_review` + urgencia crítica (seguro). Se resuelve con datos reales, no con plantillas.
 
+**Añadido (2026-11-11):** `PgFeedbackStore` (`DATABASE_URL`, tabla `ai_feedback`) para hosts con disco efímero (Render); `psycopg` solo se importa
+si hay `DATABASE_URL`. Hereda de `FeedbackStore` y también define `__len__`: **sigue valiendo** «nunca `store or X()`». Probado contra PostgreSQL 16
+(`tests/test_pg_store.py`, se omite sin `TEST_DATABASE_URL`) y en Docker: una corrección hecha en la bandeja sobrevive al reinicio de la IA.
+
 **No hecho:**
 * **Datos reales**: recolectar PQRSD históricas etiquetadas por la entidad, evaluar con `scripts/evaluate.py --csv`, reentrenar con peso alto en lo real
   y bajar `MODEL_TEMPERATURE` (los modelos entrenados con datos reales no necesitan tanto atemperamiento). Es lo que más sube la calidad.
