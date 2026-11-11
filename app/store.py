@@ -101,8 +101,9 @@ class PgFeedbackStore(FeedbackStore):
         import psycopg  # noqa: PLC0415 — optional dependency
 
         super().__init__(None)
-        self._conn = psycopg.connect(dsn, autocommit=True)
-        with self._conn.cursor() as cur:
+        self._psycopg = psycopg
+        self._dsn = dsn
+        with self._connect() as conn, conn.cursor() as cur:
             cur.execute(
                 f"CREATE TABLE IF NOT EXISTS {self.TABLE} ("
                 " id BIGSERIAL PRIMARY KEY, data JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())"
