@@ -77,4 +77,4 @@ si hay `DATABASE_URL`. Hereda de `FeedbackStore` y también define `__len__`: **
 3. Conseguir PQRSD reales etiquetadas (o el CSV exportado por el backend con las correcciones) y medir con `evaluate.py --csv`.
 4. Reentrenar con datos reales; recalibrar `MODEL_TEMPERATURE`/`RULE_MIX`; ampliar léxicos con los errores reales.
 5. Añadir zero-shot para dependencias nuevas sin ejemplos; evaluar si mejora.
-6. Observabilidad y despliegue (varias réplicas ⇒ modelo y feedback en almacenamiento compartido).
+6. Observabilidad. Despliegue: listo para Render (feedback en PostgreSQL; ver `pqrsd-router-backend/docs/DEPLOY.md`); varias réplicas ⇒ modelo en almacenamiento compartido.
