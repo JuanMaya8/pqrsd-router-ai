@@ -117,10 +117,15 @@ optimistas**. Las fronteras *queja / reclamo / petición* son difusas incluso en
 * `joblib` usa *pickle*: carga modelos solo de un directorio propio y no accesible a terceros.
 * El texto del ciudadano puede contener datos personales: `/v1/classify` **no los guarda**; solo `/v1/feedback` persiste texto (úsalo con `redact` aplicado si tu política lo exige).
 
-## Despliegue (más adelante)
-Imagen Docker lista. Variables: `MODELS_DIR` y `FEEDBACK_FILE` (volúmenes persistentes), `AI_API_KEY` (el backend la envía como `X-API-Key`),
-`TAXONOMY_FILE`, `CORS_ORIGINS` (normalmente vacío), `BOOTSTRAP_SAMPLES`. Una sola réplica con volumen es suficiente para empezar
-(el reentrenamiento es en proceso); para varias réplicas, mover el modelo y el archivo de retroalimentación a un bucket/base de datos.
+## Despliegue
+Render: se crea junto con el backend y PostgreSQL desde el blueprint `render.yaml` del repo `pqrsd-router-backend` (paso a paso en su `docs/DEPLOY.md`).
+Manual: Runtime Python, build `pip install -r requirements.txt`, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, health check `/health`,
+variables `PYTHON_VERSION=3.12.7`, `AI_API_KEY` y `DATABASE_URL`. Medido: ~175 MB de RAM y ~15 s de arranque (entrena al iniciar), cabe en 512 MB.
+
+Variables: `DATABASE_URL` (PostgreSQL, tabla `ai_feedback`; **úsala donde el disco se borra**, como Render) o `FEEDBACK_FILE` (disco), `MODELS_DIR`,
+`AI_API_KEY` (el backend la envía como `X-API-Key`), `TAXONOMY_FILE`, `CORS_ORIGINS` (normalmente vacío), `BOOTSTRAP_SAMPLES`.
+Sin `MODELS_DIR` persistente el modelo se reentrena en cada arranque con el corpus sintético + las correcciones guardadas, así que no se pierde nada.
+Para varias réplicas, el reentrenamiento sigue siendo por proceso: habría que publicar el modelo en un almacenamiento compartido.
 
 ## Nombre de repositorio sugerido
 `pqrsd-router-ai`
