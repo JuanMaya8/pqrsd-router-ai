@@ -112,6 +112,9 @@ class PgFeedbackStore(FeedbackStore):
             for (data,) in cur.fetchall():
                 self._items.append(data if isinstance(data, dict) else json.loads(data))
 
+    def _connect(self):
+        return self._psycopg.connect(self._dsn, autocommit=True, connect_timeout=15)
+
     def add(self, item: dict) -> int:
         row = {**item, "at": time.time()}
         with self._lock:
