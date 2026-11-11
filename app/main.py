@@ -31,7 +31,7 @@ from .schemas import (
     TaxonomyOut,
 )
 from .service import RouterService
-from .store import FeedbackStore, ModelStore
+from .store import FeedbackStore, ModelStore, PgFeedbackStore
 from .taxonomy import Taxonomy
 
 
