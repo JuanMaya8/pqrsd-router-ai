@@ -90,6 +90,9 @@ class PgFeedbackStore(FeedbackStore):
     Same interface and in-memory cache as :class:`FeedbackStore`; every ``add`` is written to the database first.
     Like its parent it defines ``__len__``: an empty store is *falsy*, so never write ``store or X()``.
     ``psycopg`` is imported here only, so the dependency is needed just when DATABASE_URL is used.
+    Every operation opens its own short connection: serverless databases (Neon) suspend when idle and drop open
+    connections, so a long-lived one would fail on the first correction after a quiet period. Feedback is rare,
+    so the extra connect (~50 ms, ~1 s if the database was asleep) does not matter.
     """
 
     TABLE = "ai_feedback"
