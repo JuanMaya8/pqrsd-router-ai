@@ -68,8 +68,8 @@ uvicorn app.main:app --reload --port 8000   # http://localhost:8000/docs
 * Otros idiomas, métricas Prometheus, autenticación por usuario, almacenamiento del modelo fuera del disco local (S3/GCS).
 
 ## 6. Checklist para llegar al 100 % (en orden)
-1. Ejecutar y arreglar `tests/test_api.py` con fastapi real; `docker build`.
-2. Prueba de integración con `pqrsd-router-backend` siguiendo `docs/CONTRACT.md` (clasificar, feedback, reentrenar).
+1. ~~Ejecutar y arreglar `tests/test_api.py` con fastapi real; `docker build`.~~ ✅
+2. ~~Prueba de integración con `pqrsd-router-backend` siguiendo `docs/CONTRACT.md` (clasificar, feedback, reentrenar).~~ ✅
 3. Conseguir PQRSD reales etiquetadas (o el CSV exportado por el backend con las correcciones) y medir con `evaluate.py --csv`.
 4. Reentrenar con datos reales; recalibrar `MODEL_TEMPERATURE`/`RULE_MIX`; ampliar léxicos con los errores reales.
 5. Añadir zero-shot para dependencias nuevas sin ejemplos; evaluar si mejora.
