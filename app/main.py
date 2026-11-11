@@ -35,6 +35,14 @@ from .store import FeedbackStore, ModelStore, PgFeedbackStore
 from .taxonomy import Taxonomy
 
 
+def build_feedback_store() -> FeedbackStore:
+    """DATABASE_URL (PostgreSQL) wins over FEEDBACK_FILE: on hosts with an ephemeral disk the corrections must survive deploys."""
+    dsn = os.environ.get("DATABASE_URL") or None
+    if dsn:
+        return PgFeedbackStore(dsn)
+    return FeedbackStore(os.environ.get("FEEDBACK_FILE") or None)
+
+
 def build_service() -> RouterService:
     return RouterService(
         taxonomy=Taxonomy.load(os.environ.get("TAXONOMY_FILE") or None),
