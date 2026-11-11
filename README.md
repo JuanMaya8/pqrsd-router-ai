@@ -106,11 +106,10 @@ optimistas**. Las fronteras *queja / reclamo / petición* son difusas incluso en
 
 | Estado | Elemento |
 |--------|----------|
-| ✅ Verificado (45 pruebas ejecutadas, 5 omitidas por falta de fastapi; Python 3.13, scikit-learn 1.9.1, numpy, pydantic 2) | Léxicos y reglas, extracción de entidades y anonimización, corpus sintético, modelo, clasificador híbrido, escalamiento crítico, prioridad, servicio, retroalimentación persistente, reentrenamiento y recarga, taxonomía personalizada, guardas de regresión sobre textos a mano |
-| ⚠️ Escrito pero **no ejecutado** (en el sandbox no se podía instalar `fastapi`) | `app/main.py` (rutas, API key, CORS), `tests/test_api.py`, `Dockerfile`, CI |
+| ✅ Verificado (`python -m pytest -q` → 47 pruebas, 0 omitidas; Python 3.11 con fastapi/httpx reales) | Capa HTTP (`app/main.py`: rutas, API key, CORS, errores 422), integración real con `pqrsd-router-backend` (clasificar, vista previa, feedback y `POST /v1/retrain` desde la bandeja), imagen Docker dentro del `docker compose` de los 3 repos. Léxicos y reglas, extracción de entidades y anonimización, corpus sintético, modelo, clasificador híbrido, escalamiento crítico, prioridad, servicio, retroalimentación persistente, reentrenamiento y recarga, taxonomía personalizada, guardas de regresión sobre textos a mano |
 | ❌ No hecho | Zero-shot / transformers, NER con modelo (hoy es por reglas), evaluación con PQRSD reales, calibración de probabilidades con datos reales, detección de duplicados/«casos masivos», idioma distinto del español, métricas Prometheus, autenticación por usuario |
 
-Tras `pip install -r requirements-dev.txt`, `python -m pytest -q` ejecuta además `tests/test_api.py`: si algo falla ahí, es lo primero que hay que corregir.
+`python -m pytest -q` ejecuta también `tests/test_api.py` (FastAPI real con `TestClient`).
 
 ## Limitaciones conocidas
 * El modelo de arranque se entrenó con **plantillas sintéticas** y reglas escritas por nosotros; no hay datos reales de ninguna entidad.
