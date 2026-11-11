@@ -121,7 +121,8 @@ optimistas**. Las fronteras *queja / reclamo / petición* son difusas incluso en
 * El texto del ciudadano puede contener datos personales: `/v1/classify` **no los guarda**; solo `/v1/feedback` persiste texto (úsalo con `redact` aplicado si tu política lo exige).
 
 ## Despliegue
-Render: se crea junto con el backend y PostgreSQL desde el blueprint `render.yaml` del repo `pqrsd-router-backend` (paso a paso en su `docs/DEPLOY.md`).
+Render (base de datos en **Neon**): se crea junto con el backend desde el blueprint `render.yaml` del repo `pqrsd-router-backend`, o a mano (paso a paso en su `docs/DEPLOY.md`).
+Con Neon, cada operación abre su propia conexión corta: Neon suspende la base cuando no hay uso y corta las conexiones abiertas.
 Manual: Runtime Python, build `pip install -r requirements.txt`, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, health check `/health`,
 variables `PYTHON_VERSION=3.12.7`, `AI_API_KEY` y `DATABASE_URL`. Medido: ~175 MB de RAM y ~15 s de arranque (entrena al iniciar), cabe en 512 MB.
 
