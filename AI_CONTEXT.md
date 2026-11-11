@@ -69,7 +69,7 @@ si hay `DATABASE_URL`. Hereda de `FeedbackStore` y también define `__len__`: **
 * Zero-shot / modelo de lenguaje (gancho descrito en README) y NER con modelo (hoy reglas) — mejorarían dependencia y entidades.
 * Calibración de probabilidades con datos reales (hoy las «confianzas» son relativas, no frecuencias reales).
 * Detección de PQRSD duplicadas o campañas masivas (muchos ciudadanos, mismo problema) — útil para agrupar y responder una vez.
-* Otros idiomas, métricas Prometheus, autenticación por usuario, almacenamiento del modelo fuera del disco local (S3/GCS).
+* Otros idiomas, métricas Prometheus, autenticación por usuario, almacenamiento del modelo fuera del disco local (S3/GCS) para varias réplicas.
 
 ## 6. Checklist para llegar al 100 % (en orden)
 1. ~~Ejecutar y arreglar `tests/test_api.py` con fastapi real; `docker build`.~~ ✅
