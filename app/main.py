@@ -47,7 +47,7 @@ def build_service() -> RouterService:
     return RouterService(
         taxonomy=Taxonomy.load(os.environ.get("TAXONOMY_FILE") or None),
         models=ModelStore(os.environ.get("MODELS_DIR") or None),
-        feedback=FeedbackStore(os.environ.get("FEEDBACK_FILE") or None),
+        feedback=build_feedback_store(),
         bootstrap_samples=int(os.environ.get("BOOTSTRAP_SAMPLES", "6000")),
     )
 
