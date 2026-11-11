@@ -118,7 +118,7 @@ class PgFeedbackStore(FeedbackStore):
     def add(self, item: dict) -> int:
         row = {**item, "at": time.time()}
         with self._lock:
-            with self._conn.cursor() as cur:
+            with self._connect() as conn, conn.cursor() as cur:
                 cur.execute(f"INSERT INTO {self.TABLE} (data) VALUES (%s::jsonb)", (json.dumps(row, ensure_ascii=False),))
             self._items.append(row)
             return len(self._items)
