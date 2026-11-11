@@ -53,8 +53,11 @@ uvicorn app.main:app --reload --port 8000   # http://localhost:8000/docs
   del modelo guardado, taxonomía personalizada, corrupción de línea en el JSONL tolerada.
 * Medido sobre 30 textos escritos a mano (optimista, ver README): tipo 90 %, dependencia 83 %, urgencia 80 %; ≈ 6 ms/texto.
 
-**Escrito pero NO ejecutado** (no había `fastapi` instalable): `app/main.py`, `tests/test_api.py`, `Dockerfile`, `.github/workflows/ci.yml`.
-→ **Primera tarea al retomar:** `pip install -r requirements-dev.txt && python -m pytest -q` y arreglar la capa HTTP.
+**Verificado al retomar (2026-11-11, Windows, Python 3.11, fastapi/httpx reales):**
+* `python -m pytest -q` → 47 pruebas OK, 0 omitidas (incluye `tests/test_api.py`). La capa HTTP funcionó sin cambios.
+* Integración real con `pqrsd-router-backend` (proceso `uvicorn` + backend compilado): vista previa, radicación, reclasificación → `POST /v1/feedback`, `POST /v1/retrain` desde `/staff/ai/retrain`.
+* `docker compose up --build` con los 3 repos (ver `pqrsd-router-frontend/docker-compose.yml`). Se añadió `.dockerignore` (sin él el contexto incluía `.venv`).
+* Se probó añadir una frase de «fuga de gas» al corpus: arregla ese caso pero baja la urgencia de 80 % a 76,7 % en `realistic_set` → **revertido**. El caso queda en Atención al Ciudadano + `needs_review` + urgencia crítica (seguro). Se resuelve con datos reales, no con plantillas.
 
 **No hecho:**
 * **Datos reales**: recolectar PQRSD históricas etiquetadas por la entidad, evaluar con `scripts/evaluate.py --csv`, reentrenar con peso alto en lo real
