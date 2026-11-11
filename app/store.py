@@ -82,3 +82,39 @@ class FeedbackStore:
 
     def __len__(self) -> int:
         return len(self._items)
+
+
+class PgFeedbackStore(FeedbackStore):
+    """Feedback log in PostgreSQL (table ``ai_feedback``), for hosts whose disk is wiped on every deploy (Render, Fly…).
+
+    Same interface and in-memory cache as :class:`FeedbackStore`; every ``add`` is written to the database first.
+    Like its parent it defines ``__len__``: an empty store is *falsy*, so never write ``store or X()``.
+    ``psycopg`` is imported here only, so the dependency is needed just when DATABASE_URL is used.
+    """
+
+    TABLE = "ai_feedback"
+
+    def __init__(self, dsn: str) -> None:
+        import psycopg  # noqa: PLC0415 — optional dependency
+
+        super().__init__(None)
+        self._conn = psycopg.connect(dsn, autocommit=True)
+        with self._conn.cursor() as cur:
+            cur.execute(
+                f"CREATE TABLE IF NOT EXISTS {self.TABLE} ("
+                " id BIGSERIAL PRIMARY KEY, data JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())"
+            )
+            cur.execute(f"SELECT data FROM {self.TABLE} ORDER BY id")
+            for (data,) in cur.fetchall():
+                self._items.append(data if isinstance(data, dict) else json.loads(data))
+
+    def add(self, item: dict) -> int:
+        row = {**item, "at": time.time()}
+        with self._lock:
+            with self._conn.cursor() as cur:
+                cur.execute(f"INSERT INTO {self.TABLE} (data) VALUES (%s::jsonb)", (json.dumps(row, ensure_ascii=False),))
+            self._items.append(row)
+            return len(self._items)
+
+    def close(self) -> None:
+        self._conn.close()
