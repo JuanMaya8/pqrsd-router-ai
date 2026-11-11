@@ -1,7 +1,7 @@
 """FastAPI wiring. All logic lives in `service.py` / `classifier.py`.
 
 Run:  uvicorn app.main:app --reload --port 8000
-Env:  see .env.example  (MODELS_DIR, FEEDBACK_FILE, TAXONOMY_FILE, AI_API_KEY, CORS_ORIGINS, BOOTSTRAP_SAMPLES)
+Env:  see .env.example  (MODELS_DIR, FEEDBACK_FILE, DATABASE_URL, TAXONOMY_FILE, AI_API_KEY, CORS_ORIGINS, BOOTSTRAP_SAMPLES)
 """
 
 from __future__ import annotations
