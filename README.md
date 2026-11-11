@@ -14,6 +14,9 @@ Recibe el texto libre que escribe el ciudadano y devuelve, **en milisegundos y c
 > **Estado: avance funcional (v0.1.0)**, no el proyecto terminado. Lee *Qué está hecho y qué no* y, sobre todo,
 > *Honestidad sobre la precisión*: **el modelo arranca con un corpus SINTÉTICO**; para producción hay que reentrenarlo con PQRSD reales.
 
+> **Para la entrega:** la guía de demostración (cómo levantar todo con una orden, claves de prueba y recorrido de 10 minutos) está en
+> [`pqrsd-router-frontend/docs/GUIA_DEMO.md`](https://github.com/JuanMaya8/pqrsd-router-frontend/blob/main/docs/GUIA_DEMO.md).
+
 ## Cómo ejecutarlo
 
 Requisitos: **Python 3.11+** (probado con 3.13).
