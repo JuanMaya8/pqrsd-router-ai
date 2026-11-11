@@ -124,4 +124,4 @@ class PgFeedbackStore(FeedbackStore):
             return len(self._items)
 
     def close(self) -> None:
-        self._conn.close()
+        """Nothing to release: connections are opened per operation."""
