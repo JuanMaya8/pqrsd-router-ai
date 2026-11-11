@@ -62,6 +62,8 @@ uvicorn app.main:app --reload --port 8000   # http://localhost:8000/docs
 **Añadido (2026-11-11):** `PgFeedbackStore` (`DATABASE_URL`, tabla `ai_feedback`) para hosts con disco efímero (Render); `psycopg` solo se importa
 si hay `DATABASE_URL`. Hereda de `FeedbackStore` y también define `__len__`: **sigue valiendo** «nunca `store or X()`». Probado contra PostgreSQL 16
 (`tests/test_pg_store.py`, se omite sin `TEST_DATABASE_URL`) y en Docker: una corrección hecha en la bandeja sobrevive al reinicio de la IA.
+Despliegue con **Neon**: `PgFeedbackStore` abre **una conexión corta por operación** (Neon suspende la base y corta conexiones inactivas);
+no vuelvas a una conexión larga sin reconexión. Probado con un `psycopg` falso (`tests/test_pg_store_reconnect.py`).
 
 **No hecho:**
 * **Datos reales**: recolectar PQRSD históricas etiquetadas por la entidad, evaluar con `scripts/evaluate.py --csv`, reentrenar con peso alto en lo real
