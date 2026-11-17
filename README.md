@@ -1,135 +1,156 @@
-# pqrsd-router-ai
+# PQRSD Inteligente · Servicio de IA
 
-Servicio de **IA** del proyecto *Clasificador y Enrutador Inteligente de PQRSD para Entidades Públicas*.
-Es el tercer repositorio del sistema (junto a `pqrsd-router-frontend` y `pqrsd-router-backend`).
+Servicio de **clasificación de texto y extracción de entidades** del proyecto *Clasificador y Enrutador Inteligente de PQRSD
+para Entidades Públicas*. Recibe lo que escribe el ciudadano con sus propias palabras y responde en milisegundos, con
+justificación en español, **qué es, a quién le corresponde y qué tan urgente es**.
 
-Recibe el texto libre que escribe el ciudadano y devuelve, **en milisegundos y con justificación en español**:
+| Repositorio | Rol |
+|---|---|
+| [`pqrsd-router-frontend`](https://github.com/JuanMaya8/pqrsd-router-frontend) | Portal ciudadano y bandeja de funcionarios (Next.js) |
+| [`pqrsd-router-backend`](https://github.com/JuanMaya8/pqrsd-router-backend) | Radicación, plazos legales, flujo y tiempo real (NestJS) |
+| **`pqrsd-router-ai`** (este) | Clasificación híbrida, entidades y aprendizaje continuo (FastAPI + scikit-learn) |
 
-* **Tipo**: petición · queja · reclamo · sugerencia · denuncia (y, si es petición, el subtipo: general, información/documentos, consulta).
-* **Dependencia competente** (12 dependencias municipales por defecto; configurable).
-* **Nivel de urgencia** (crítica/alta/media/baja) y un **puntaje de prioridad 0–100** para ordenar la bandeja.
-* **Entidades**: fechas (incluidas «ayer», «hace 3 días»), montos, lugares, direcciones, trámites, personas, cédulas, teléfonos, correos, placas — con marca de **dato personal** y texto anonimizado.
-* **`needs_review`**: cuándo un funcionario debe confirmar (baja confianza, texto muy corto, empate entre dependencias, urgencia escalada por riesgo vital).
+> Guía de demostración (levantar todo con una orden, claves de prueba y recorrido de 10 minutos):
+> [`pqrsd-router-frontend/docs/GUIA_DEMO.md`](https://github.com/JuanMaya8/pqrsd-router-frontend/blob/main/docs/GUIA_DEMO.md)
 
-> **Estado: avance funcional (v0.1.0)**, no el proyecto terminado. Lee *Qué está hecho y qué no* y, sobre todo,
-> *Honestidad sobre la precisión*: **el modelo arranca con un corpus SINTÉTICO**; para producción hay que reentrenarlo con PQRSD reales.
+---
 
-> **Para la entrega:** la guía de demostración (cómo levantar todo con una orden, claves de prueba y recorrido de 10 minutos) está en
-> [`pqrsd-router-frontend/docs/GUIA_DEMO.md`](https://github.com/JuanMaya8/pqrsd-router-frontend/blob/main/docs/GUIA_DEMO.md).
+## Qué devuelve
 
-## Cómo ejecutarlo
+| Salida | Detalle |
+|---|---|
+| **Tipo** | Petición · Queja · Reclamo · Sugerencia · Denuncia. Si es petición, también el subtipo (general, información/documentos, consulta), que define el plazo legal |
+| **Dependencia competente** | Una de 12 dependencias municipales (Salud, Movilidad, Hacienda, Infraestructura, Educación, Ambiente, Servicios Públicos…). Configurable |
+| **Urgencia y prioridad** | Crítica · Alta · Media · Baja, y un puntaje de prioridad de 0 a 100 para ordenar la bandeja |
+| **Entidades** | Fechas (también «ayer» o «hace 3 días»), montos, lugares, direcciones, trámites, placas, radicados previos, personas, cédulas, teléfonos y correos |
+| **Datos personales** | Las entidades personales se marcan y el texto se puede anonimizar |
+| **`needs_review`** | Indica cuándo un funcionario debe confirmar: baja confianza, empate entre dependencias, texto muy corto o urgencia escalada por riesgo |
+| **Razones** | Frases que explican la decisión, para que el funcionario entienda por qué |
 
-Requisitos: **Python 3.11+** (probado con 3.13).
+## Cómo clasifica: modelo + reglas
+
+```
+texto ─┬─► Modelo (TF-IDF + Regresión Logística) ─┐
+       │                                          ├─► mezcla ─► umbrales y seguridad ─► resultado + razones
+       └─► Reglas explicables (léxicos en español) ┘
+```
+
+1. **Modelo de aprendizaje automático.** El texto se vectoriza con **TF-IDF** por palabras (1–2) y por fragmentos de caracteres (3–5),
+   lo que lo hace tolerante a faltas de ortografía y tildes. Una **regresión logística** por cada salida (tipo, dependencia, urgencia y subtipo),
+   con clases balanceadas.
+2. **Reglas explicables.** Léxicos en español con pesos de 1 a 3 («fuga de gas», «no llega el agua», «cobro doble»…). Aportan la
+   justificación que ve el funcionario y ayudan en casos poco frecuentes.
+3. **Mezcla.** Las probabilidades del modelo se suavizan (temperatura por salida) y se combinan con las reglas; el peso de las reglas crece
+   con la evidencia encontrada.
+4. **Seguridad primero.** Si aparece una frase de riesgo para la vida o la integridad, la urgencia **se escala a crítica** aunque el modelo
+   discrepe: una falsa alarma cuesta menos que una emergencia sin atender.
+5. **Duda = revisión humana.** Con baja confianza la solicitud se marca para revisión, y si ninguna dependencia es clara se envía a
+   *Atención al Ciudadano*.
+6. **Aprendizaje continuo.** Cada corrección de un funcionario llega anonimizada a `POST /v1/feedback`; `POST /v1/retrain` reentrena
+   con esas correcciones (con más peso) y reemplaza el modelo sin reiniciar el servicio.
+
+**¿Por qué no un modelo de lenguaje grande?** Este modelo corre en CPU en un servidor gratuito, responde en ≈ 6 ms, es explicable, no envía
+datos de ciudadanos a terceros y aprende con pocas correcciones. El diseño deja un punto de extensión para añadir un clasificador
+*zero-shot* (p. ej. XLM-RoBERTa NLI) cuando haga falta.
+
+## Precisión: medida con honestidad
+
+El modelo inicial se entrena con un **corpus sintético de 6 000 ejemplos** generados a partir de situaciones y plantillas, balanceado por tipo
+y dependencia. Es sintético y así se declara en la respuesta del servicio.
+
+| Medida | Resultado |
+|---|---|
+| 30 textos escritos a mano, fuera de las plantillas (`tests/realistic_set.py`) | Tipo **90 %** · Dependencia **83 %** · Urgencia **80 %** |
+| Latencia | ≈ 6 ms por texto (CPU, un hilo) |
+
+Con 30 casos el margen es de ± 10 puntos, así que estas cifras son **indicativas**. La medida válida es la que haga una entidad con sus
+PQRSD históricas etiquetadas:
+
+```bash
+python scripts/evaluate.py --csv etiquetadas.csv   # columnas: text,type,dependency,urgency
+```
+
+## API
+
+| Método | Ruta | Uso |
+|---|---|---|
+| `POST` | `/v1/classify` | Clasifica un texto (opcional `redact: true` para anonimizar) |
+| `POST` | `/v1/classify/batch` | Clasifica varios textos |
+| `POST` | `/v1/entities` | Solo extracción de entidades |
+| `POST` | `/v1/feedback` | Registra la corrección de un funcionario |
+| `POST` | `/v1/retrain` | Reentrena con las correcciones guardadas |
+| `GET` | `/v1/model` · `/v1/taxonomy` · `/health` | Información del modelo, vocabulario y estado |
+
+Documentación interactiva (Swagger) en `/docs`. El contrato completo entre los 3 repositorios está en [`docs/CONTRACT.md`](docs/CONTRACT.md).
+
+## Ejecutar en local
+
+Requisitos: **Python 3.11+**.
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
-pip install -r requirements-dev.txt  # incluye pytest y httpx
-cp .env.example .env                 # opcional; MODELS_DIR persiste el modelo y FEEDBACK_FILE las correcciones
-
+source .venv/bin/activate              # Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
 uvicorn app.main:app --reload --port 8000
-#   Swagger: http://localhost:8000/docs      Salud: http://localhost:8000/health
-
-python -m pytest -q                  # o: python -m unittest discover -s tests -t .
-python scripts/evaluate.py --show-errors   # mide el clasificador con textos escritos a mano
+# Swagger: http://localhost:8000/docs
 ```
 
-Al primer arranque (sin modelo guardado) entrena el modelo de arranque: **≈ 8 s**. Con `MODELS_DIR` definido solo ocurre una vez.
-
-Con Docker:
-```bash
-docker build -t pqrsd-router-ai .
-docker run -p 8000:8000 -v "$PWD/data/models:/data/models" -v "$PWD/data/feedback:/data/feedback" pqrsd-router-ai
-```
+El primer arranque entrena el modelo inicial (≈ 8 s).
 
 Prueba rápida:
+
 ```bash
 curl -s localhost:8000/v1/classify -H 'content-type: application/json' -d '{
-  "text": "Hace tres semanas no llega el agua a mi barrio Santa Lucía y tengo un bebé. Soy Ana Pérez, cédula 52.123.456.",
-  "redact": true }' | python -m json.tool
+  "text": "Hace tres semanas no llega el agua a mi barrio Santa Lucía y tengo un bebé.",
+  "redact": true }'
 ```
 
-## Arquitectura
+Pruebas:
+
+```bash
+python -m pytest -q                        # unitarias, API y casos realistas
+python scripts/evaluate.py --show-errors   # precisión sobre textos escritos a mano
+```
+
+Con Docker: `docker build -t pqrsd-router-ai . && docker run -p 8000:8000 pqrsd-router-ai`.
+
+## Estructura
 
 ```
 app/
-├── main.py        FastAPI: solo cablea HTTP ↔ servicio (CORS, API key, errores)
-├── service.py     RouterService: casos de uso (classify, batch, entities, feedback, retrain) — sin framework
-├── classifier.py  HybridClassifier: mezcla modelo + reglas, umbrales, fallback, escalamiento, prioridad, razones en español
-├── model.py       TextModel: TF-IDF (palabras 1-2 + caracteres 3-5) + 4 cabezas de Regresión Logística
-├── rules.py       Léxicos explicables (sin tildes, con límites de palabra) para tipo, urgencia, subtipo y dependencia
-├── entities.py    Extracción de entidades por reglas + anonimización (offsets sobre el texto original)
-├── taxonomy.py    Tipos, urgencias, subtipos y dependencias (TAXONOMY_FILE para personalizar)
-├── corpus.py      Generador del corpus SINTÉTICO de arranque (determinista)  ·  corpus_data.py: situaciones y plantillas
-├── store.py       ModelStore (joblib, escritura atómica) y FeedbackStore (JSON Lines, append-only)
-├── schemas.py     Contrato pydantic v2  ·  errors.py: ServiceError(code, mensaje_es, status)  ·  text.py: normalización
-scripts/           evaluate.py (medir) · train.py (reentrenar sin servidor)
-tests/             unitarias + realistic_set.py (30 textos escritos a mano, fuera de las plantillas)
-docs/CONTRACT.md   contrato compartido por los 3 repos
+├── main.py         API FastAPI (rutas, API key, CORS, errores). Único archivo que conoce FastAPI
+├── service.py      Casos de uso: clasificar, entidades, feedback, reentrenar
+├── classifier.py   Clasificador híbrido: mezcla, umbrales, escalamiento, prioridad y razones
+├── model.py        TF-IDF + regresiones logísticas
+├── rules.py        Léxicos explicables
+├── entities.py     Extracción de entidades y anonimización
+├── taxonomy.py     Tipos, urgencias, subtipos y dependencias (personalizable)
+├── corpus.py       Generador del corpus sintético (determinista)
+└── store.py        Persistencia del modelo y de las correcciones (archivo o PostgreSQL)
+scripts/            evaluate.py · train.py
+tests/              Pruebas automatizadas
 ```
 
-Capas: **HTTP (`main.py`) → servicio → clasificador (modelo + reglas + entidades) → almacén**. Solo `main.py` importa FastAPI.
+## Variables de entorno
 
-### Cómo clasifica (modelo híbrido)
-1. **Modelo**: un vectorizador TF-IDF (palabras y n-gramas de caracteres, robusto a faltas de ortografía) y una **Regresión
-   Logística por cabeza** (`type`, `dependency`, `urgency`, `subtype`) con `class_weight="balanced"`.
-2. **Reglas explicables**: léxicos en español sin tildes con pesos 1–3. Dan (a) la **justificación** que ve el funcionario
-   («menciona «fuga de gas», «huele muy fuerte»…») y (b) un *prior* para casos raros o nuevos.
-3. **Mezcla**: el modelo se *atempera* (`p^(1/T)` con `T` por cabeza: tipo 3, dependencia 1, urgencia 5) porque un modelo entrenado
-   con plantillas es demasiado seguro ante texto real; el peso de las reglas crece con la evidencia
-   (`mix × min(1, puntaje/6)`; `mix`: tipo 0.5, dependencia 0.3, urgencia 0.5, subtipo 0.4).
-4. **Seguridad primero**: si una regla crítica suma ≥ 3 (fuga de gas, cable caído, amenaza de muerte, niño casi atropellado…) la
-   urgencia **se escala a crítica** aunque el modelo discrepe (un falso positivo cuesta menos que una emergencia sin atender) y se marca para revisión.
-5. **Dependencia dudosa**: si la mejor dependencia tiene < 0.30 de probabilidad se envía a *Atención al Ciudadano* con `routed_to_fallback = true`.
-6. **Prioridad**: esperanza de los valores de urgencia (95/72/42/15) con un piso por nivel (crítica ≥ 85, alta ≥ 62, media ≥ 30), de modo que
-   el puntaje nunca contradiga el nivel.
-7. **Aprendizaje continuo**: cada corrección de un funcionario llega por `POST /v1/feedback`; `POST /v1/retrain` reentrena con
-   sintético + correcciones (peso ×5 por defecto) y reemplaza el modelo en caliente (escritura atómica).
-
-### ¿Zero-shot o *fine-tuning*?
-El caso de estudio admite ambos. Aquí se eligió un modelo **ligero entrenable en CPU** (TF-IDF + regresión logística) porque
-corre en cualquier servidor barato, responde en ~6 ms, es explicable y aprende con pocas correcciones. **Gancho zero-shot (no incluido):**
-`HybridClassifier._one` recibe `model_p` por cabeza; para usar un NLI multilingüe (p. ej. `joeddav/xlm-roberta-large-xnli`) basta
-con generar `model_p["dependency"]` desde sus etiquetas (hipótesis = descripción de cada dependencia en `taxonomy.py`) cuando
-`model.heads` esté vacío o la confianza sea baja. Requiere `transformers` + `torch` (≈ 2 GB): por eso quedó fuera del avance.
-
-## Honestidad sobre la precisión
-| Medida | Resultado | Cómo leerlo |
-|--------|-----------|-------------|
-| Validación 85/15 sobre el corpus **sintético** | ≈ 100 % | **No significa nada**: el modelo memoriza las plantillas. |
-| **30 textos escritos a mano** (`tests/realistic_set.py`), modelo de arranque 6 000 muestras | tipo **90 %** · dependencia **83 %** · urgencia **80 %** | Indicativo. Con 30 casos el margen de error es de ± 10 puntos. |
-| De los 12 textos con algún error, marcados `needs_review` | 5 | La revisión humana atrapa menos de la mitad de los errores: **no quites al funcionario del circuito**. |
-| Latencia | ≈ 6 ms por texto (CPU, 1 hilo) | Medida en el sandbox. |
-
-⚠️ Los léxicos y los parámetros de mezcla se ajustaron mirando ese mismo conjunto de 30 textos, así que **los porcentajes son
-optimistas**. Las fronteras *queja / reclamo / petición* son difusas incluso entre humanos. La medida válida es la que haga la entidad con
-**sus** PQRSD históricas etiquetadas: `python scripts/evaluate.py --csv etiquetadas.csv` (columnas `text,type,dependency,urgency`).
-
-## Qué está hecho y qué no
-
-| Estado | Elemento |
-|--------|----------|
-| ✅ Verificado (`python -m pytest -q` → 47 pruebas, 0 omitidas; Python 3.11 con fastapi/httpx reales) | Capa HTTP (`app/main.py`: rutas, API key, CORS, errores 422), integración real con `pqrsd-router-backend` (clasificar, vista previa, feedback y `POST /v1/retrain` desde la bandeja), imagen Docker dentro del `docker compose` de los 3 repos. Léxicos y reglas, extracción de entidades y anonimización, corpus sintético, modelo, clasificador híbrido, escalamiento crítico, prioridad, servicio, retroalimentación persistente, reentrenamiento y recarga, taxonomía personalizada, guardas de regresión sobre textos a mano |
-| ❌ No hecho | Zero-shot / transformers, NER con modelo (hoy es por reglas), evaluación con PQRSD reales, calibración de probabilidades con datos reales, detección de duplicados/«casos masivos», idioma distinto del español, métricas Prometheus, autenticación por usuario |
-
-`python -m pytest -q` ejecuta también `tests/test_api.py` (FastAPI real con `TestClient`).
-
-## Limitaciones conocidas
-* El modelo de arranque se entrenó con **plantillas sintéticas** y reglas escritas por nosotros; no hay datos reales de ninguna entidad.
-* Las entidades por reglas no entienden todas las formas de escribir fechas o nombres; la lista de ciudades/departamentos es parcial.
-* `joblib` usa *pickle*: carga modelos solo de un directorio propio y no accesible a terceros.
-* El texto del ciudadano puede contener datos personales: `/v1/classify` **no los guarda**; solo `/v1/feedback` persiste texto (úsalo con `redact` aplicado si tu política lo exige).
+| Variable | Para qué |
+|---|---|
+| `AI_API_KEY` | Clave que el backend envía en `X-API-Key` |
+| `DATABASE_URL` | PostgreSQL para guardar las correcciones (recomendado en la nube) |
+| `FEEDBACK_FILE`, `MODELS_DIR` | Alternativa en disco para correcciones y modelo |
+| `TAXONOMY_FILE` | Taxonomía propia de la entidad |
+| `CORS_ORIGINS`, `BOOTSTRAP_SAMPLES` | Orígenes permitidos y tamaño del corpus inicial |
 
 ## Despliegue
-Render (base de datos en **Neon**): se crea junto con el backend desde el blueprint `render.yaml` del repo `pqrsd-router-backend`, o a mano (paso a paso en su `docs/DEPLOY.md`).
-Con Neon, cada operación abre su propia conexión corta: Neon suspende la base cuando no hay uso y corta las conexiones abiertas.
-Manual: Runtime Python, build `pip install -r requirements.txt`, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, health check `/health`,
-variables `PYTHON_VERSION=3.12.7`, `AI_API_KEY` y `DATABASE_URL`. Medido: ~175 MB de RAM y ~15 s de arranque (entrena al iniciar), cabe en 512 MB.
 
-Variables: `DATABASE_URL` (PostgreSQL, tabla `ai_feedback`; **úsala donde el disco se borra**, como Render) o `FEEDBACK_FILE` (disco), `MODELS_DIR`,
-`AI_API_KEY` (el backend la envía como `X-API-Key`), `TAXONOMY_FILE`, `CORS_ORIGINS` (normalmente vacío), `BOOTSTRAP_SAMPLES`.
-Sin `MODELS_DIR` persistente el modelo se reentrena en cada arranque con el corpus sintético + las correcciones guardadas, así que no se pierde nada.
-Para varias réplicas, el reentrenamiento sigue siendo por proceso: habría que publicar el modelo en un almacenamiento compartido.
+Desplegado en **Render** con la base de datos en **Neon** (PostgreSQL). Se crea junto con el backend desde el blueprint `render.yaml`
+del repositorio `pqrsd-router-backend`; el paso a paso está en su
+[`docs/DEPLOY.md`](https://github.com/JuanMaya8/pqrsd-router-backend/blob/main/docs/DEPLOY.md).
+Consume ≈ 175 MB de RAM y cabe en el plan gratuito.
 
-## Nombre de repositorio sugerido
-`pqrsd-router-ai`
+## Limitaciones y trabajo futuro
+
+* Entrenar y medir con PQRSD reales de una entidad (lo que más mejora la calidad).
+* Clasificación *zero-shot* para dependencias nuevas y reconocimiento de entidades con un modelo (hoy por reglas).
+* Calibrar las confianzas con datos reales.
+* Detectar solicitudes duplicadas o campañas masivas.
